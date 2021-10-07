@@ -118,7 +118,7 @@ void loop() {
     temperatureValue = dht.readTemperature();
     signalstrengthValue = WiFi.RSSI();
 
-    if (isnan(signalstrengthValue)) {
+    if (isnan(temperatureValue)) {
       signalstrengthValue = 0;
     }
   
