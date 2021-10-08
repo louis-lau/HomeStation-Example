@@ -140,7 +140,7 @@ void loop() {
       temperatureValue = 0;
     }
 
-    if ((millis() - lastReadAt) > 10000) { // read in 30ms interval
+    if ((millis() - lastReadAt) > 10000) { // read in 10s interval
         
         sensorTemperature.setValue(temperatureValue);
         Serial.print("Current temperature is: ");
@@ -159,9 +159,11 @@ void loop() {
         
         lastReadAt = millis();
     }
-
-    if ((millis() - lastAvailabilityToggleAt) > 15000) {
-        device.setAvailability(!device.isOnline());
+    
+    // send offline state after 30s interval
+    // Note: change this value if you have a large data send interval
+    if ((millis() - lastAvailabilityToggleAt) > 30000) { 
+        device.setAvailability(1);
         lastAvailabilityToggleAt = millis();
     }
 }
