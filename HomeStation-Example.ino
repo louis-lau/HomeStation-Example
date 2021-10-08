@@ -12,7 +12,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 //Define variables
 unsigned long lastReadAt = millis();
-unsigned long lastTemperatureSend = millis();
+unsigned long lastAvailabilityToggleAt = millis();
 bool lastInputState = false;
 
 float temperatureValue;
@@ -49,6 +49,9 @@ void setup() {
     }
     Serial.println();
     Serial.println("Connected to the network");
+
+    lastReadAt = millis();
+    lastAvailabilityToggleAt = millis();
 
     // Set sensor and/or device names
     // String conversion for incoming data from Secret.h
@@ -94,6 +97,17 @@ void setup() {
     sensorSignalstrength.setDeviceClass("signal_strength");
     sensorSignalstrength.setUnitOfMeasurement("dBm");
 
+    // This method enables availability for all device types registered on the device.
+    // For example, if you have 5 sensors on the same device, you can enable
+    // shared availability and change availability state of all sensors using
+    // single method call "device.setAvailability(false|true)"
+    device.enableSharedAvailability();
+
+    // Optionally, you can enable MQTT LWT feature. If device will lose connection
+    // to the broker, all device types related to it will be marked as offline in
+    // the Home Assistant Panel.
+    device.enableLastWill();
+
     mqtt.begin(BROKER_ADDR, BROKER_USERNAME, BROKER_PASSWORD);
 
     while (!mqtt.isConnected()) {
@@ -126,7 +140,7 @@ void loop() {
       temperatureValue = 0;
     }
 
-    if ((millis() - lastTemperatureSend) > 10000) { // read in 30ms interval
+    if ((millis() - lastReadAt) > 10000) { // read in 30ms interval
         
         sensorTemperature.setValue(temperatureValue);
         Serial.print("Current temperature is: ");
@@ -141,8 +155,13 @@ void loop() {
         sensorSignalstrength.setValue(signalstrengthValue);
         Serial.print("Current signal strength is: ");
         Serial.print(signalstrengthValue);
-        Serial.println("%");
+        Serial.println("dBm");
         
-        lastTemperatureSend = millis();
+        lastReadAt = millis();
+    }
+
+    if ((millis() - lastAvailabilityToggleAt) > 15000) {
+        device.setAvailability(!device.isOnline());
+        lastAvailabilityToggleAt = millis();
     }
 }
