@@ -12,7 +12,7 @@ DHT dht(DHTPIN, DHTTYPE);
 
 //Define variables
 unsigned long lastReadAt = millis();
-unsigned long lastAvailabilityToggleAt = millis();
+unsigned long lastTemperatureSend = millis();
 bool lastInputState = false;
 
 float temperatureValue;
@@ -26,6 +26,7 @@ HAMqtt mqtt(client, device);
 
 //Define the sensors and/or devices
 //The string must not contain any spaces!!! Otherwise the sensor will not show up in Home Assistant
+HASensor sensorOwner("Owner");
 HASensor sensorLong("Long");
 HASensor sensorLat("Lat");
 HASensor sensorTemperature("Temperature");
@@ -50,9 +51,6 @@ void setup() {
     Serial.println();
     Serial.println("Connected to the network");
 
-    lastReadAt = millis();
-    lastAvailabilityToggleAt = millis();
-
     // Set sensor and/or device names
     // String conversion for incoming data from Secret.h
     String student_id = STUDENT_ID;
@@ -60,6 +58,7 @@ void setup() {
 
     //Add student ID number with sensor name
     String stationNameStr = student_name + "'s Home Station";
+    String ownerNameStr = student_id + " Station owner";
     String longNameStr = student_id + " Long";
     String latNameStr = student_id + " Lat";
     String temperatureNameStr = student_id + " Temperature";
@@ -68,6 +67,7 @@ void setup() {
     
     //Convert the strings to const char*
     const char* stationName = stationNameStr.c_str();
+    const char* ownerName = ownerNameStr.c_str();
     const char* longName = longNameStr.c_str();
     const char* latName = latNameStr.c_str();
     const char* temperatureName = temperatureNameStr.c_str();
@@ -79,6 +79,9 @@ void setup() {
     device.setSoftwareVersion(SOFTWARE_VERSION);
     device.setManufacturer(STUDENT_NAME);
     device.setModel(MODEL_TYPE);
+
+    sensorOwner.setName(ownerName);
+    sensorOwner.setIcon("mdi:account");
 
     sensorLong.setName(longName);
     sensorLong.setIcon("mdi:crosshairs-gps");
@@ -97,17 +100,6 @@ void setup() {
     sensorSignalstrength.setDeviceClass("signal_strength");
     sensorSignalstrength.setUnitOfMeasurement("dBm");
 
-    // This method enables availability for all device types registered on the device.
-    // For example, if you have 5 sensors on the same device, you can enable
-    // shared availability and change availability state of all sensors using
-    // single method call "device.setAvailability(false|true)"
-    device.enableSharedAvailability();
-
-    // Optionally, you can enable MQTT LWT feature. If device will lose connection
-    // to the broker, all device types related to it will be marked as offline in
-    // the Home Assistant Panel.
-    device.enableLastWill();
-
     mqtt.begin(BROKER_ADDR, BROKER_USERNAME, BROKER_PASSWORD);
 
     while (!mqtt.isConnected()) {
@@ -118,6 +110,8 @@ void setup() {
     
     Serial.println();
     Serial.println("Connected to MQTT broker");
+
+    sensorOwner.setValue(STUDENT_NAME);
 
     sensorLat.setValue(LAT, (uint8_t)15U);
     sensorLong.setValue(LONG, (uint8_t)15U);
@@ -140,7 +134,7 @@ void loop() {
       temperatureValue = 0;
     }
 
-    if ((millis() - lastReadAt) > 10000) { // read in 10s interval
+    if ((millis() - lastTemperatureSend) > 10000) { // read in 30ms interval
         
         sensorTemperature.setValue(temperatureValue);
         Serial.print("Current temperature is: ");
@@ -155,15 +149,8 @@ void loop() {
         sensorSignalstrength.setValue(signalstrengthValue);
         Serial.print("Current signal strength is: ");
         Serial.print(signalstrengthValue);
-        Serial.println("dBm");
+        Serial.println("%");
         
-        lastReadAt = millis();
-    }
-    
-    // send offline state after 30s interval
-    // Note: change this value if you have a large data send interval
-    if ((millis() - lastAvailabilityToggleAt) > 30000) { 
-        device.setAvailability(1);
-        lastAvailabilityToggleAt = millis();
+        lastTemperatureSend = millis();
     }
 }
