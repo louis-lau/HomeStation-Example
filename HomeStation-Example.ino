@@ -11,7 +11,6 @@
 DHT dht(DHTPIN, DHTTYPE);
 
 //Define variables
-unsigned long lastReadAt = millis();
 unsigned long lastTemperatureSend = millis();
 bool lastInputState = false;
 
@@ -126,8 +125,8 @@ void loop() {
     temperatureValue = dht.readTemperature();
     signalstrengthValue = WiFi.RSSI();
 
-    if (isnan(temperatureValue)) {
-      signalstrengthValue = 0;
+    if (isnan(humidityValue)) {
+      humidityValue = 0;
     }
   
     if (isnan(temperatureValue)) {
